@@ -4,7 +4,7 @@ export const CONFIG = {
   supabaseUrl: (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? 'https://cfmyuedpxbtxblotrywn.supabase.co',
   supabaseKey: (import.meta.env.VITE_SUPABASE_KEY as string | undefined) ?? 'sb_publishable_xpb9xJc1gO8GbndPniAgtQ_4ESIhYj9',
   // Public URL where the web build is hosted. NFC cards are written with links under this.
-  publicUrl: (import.meta.env.VITE_PUBLIC_URL as string | undefined) ?? 'https://victorbee.com/posh/',
+  publicUrl: (import.meta.env.VITE_PUBLIC_URL as string | undefined) ?? 'https://enphitic-hash.github.io/posh/',
   company: {
     name: 'Posh Properties Ltd',
     tagline: 'We Build Your Dreams',

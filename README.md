@@ -7,6 +7,7 @@ Built by Victor Bee Technologies, Mbarara. All names, units and money are sample
 | Get it | Where |
 |---|---|
 | Android app (APK) | [Releases → latest → `Posh-Passport.apk`](../../releases/tag/latest) |
+| **Live web version (share this)** | https://enphitic-hash.github.io/posh/ |
 | Web build, ready to upload | [Releases → latest → `posh-web.zip`](../../releases/tag/latest) |
 | Source code | this repository (`main`) |
 | Database | `supabase/schema.sql` and `supabase/seed.sql` |
@@ -140,25 +141,27 @@ To use your own Supabase project:
 
 The policies in `schema.sql` are open, which suits a demo. For production, tie them to Supabase Auth users and roles.
 
-## 7. Host it at victorbee.com/posh (Cloudflare)
+## 7. Live web version (free, GitHub Pages)
 
-Routing uses `#/` links and relative paths, so the build works from any folder and no rewrite rules are needed.
+**https://enphitic-hash.github.io/posh/** is the public preview to share with clients.
 
-**Option A: upload the zip.**
-1. Download `posh-web.zip` from the latest release, or run `npm run build` and use `dist/`.
-2. Unzip it into the `posh/` folder of the site, so `https://victorbee.com/posh/index.html` exists.
-   * If victorbee.com is a Cloudflare Pages project built from a repo, put the files in that repo's output folder under `posh/` and push.
-   * For a direct-upload Pages project, add `posh/` to the uploaded folder and deploy again.
+| Link | Opens |
+|---|---|
+| https://enphitic-hash.github.io/posh/ | Home page |
+| https://enphitic-hash.github.io/posh/#/app | Posh app (phone frame on a computer, full screen on a phone) |
+| https://enphitic-hash.github.io/posh/#/office | Posh Office |
+| https://enphitic-hash.github.io/posh/#/p/PP-KLA-0412 | A property plaque page |
+| https://enphitic-hash.github.io/posh/#/c/PC-0412-B4-7781 | The demo Posh card |
 
-**Option B: automatic deploy from GitHub.**
-1. Add repository secrets `CLOUDFLARE_API_TOKEN` (permission: *Cloudflare Pages: Edit*) and `CLOUDFLARE_ACCOUNT_ID`.
-2. Optionally add a repository variable `CF_PAGES_PROJECT` (default `posh-passport`).
-3. Every push now deploys `dist/` to that Pages project, for example `posh-passport.pages.dev`.
-4. To serve it under `victorbee.com/posh`, either:
-   * attach a subdomain such as `posh.victorbee.com` to the project, or
-   * add a Cloudflare Worker route `victorbee.com/posh/*` that proxies to the Pages URL.
+**How it updates.** Every push to `main` builds the site, and GitHub Actions publishes it to the `gh-pages` branch. GitHub Pages serves that branch.
 
-**If the address changes** (for example to `posh.victorbee.com`), set `VITE_PUBLIC_URL` and rebuild. The cards must then be rewritten and the QR codes reprinted, because they hold the full link.
+**One-time setup on a new copy of the repo.** Go to **Settings → Pages → Build and deployment → Source: Deploy from a branch → `gh-pages` / `(root)` → Save**. The site appears at `https://<owner>.github.io/<repo>/` about a minute later.
+
+On your own fork, set `VITE_PUBLIC_URL` (repository variable, or `.env.local`) to your Pages address. Cards and QR codes then point to it.
+
+**Hosting somewhere else instead.** Routing uses `#/` links and relative paths, so the same build works in any folder of any static host. Use `posh-web.zip` from the release, or `dist/` after `npm run build`. For **Cloudflare Pages**, add the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets, and the workflow also deploys there (project name from the variable `CF_PAGES_PROJECT`, default `posh-passport`).
+
+**If the address changes**, set `VITE_PUBLIC_URL` and rebuild. Cards must then be rewritten and QR codes reprinted, because they hold the full link. The Android app opens links from both `enphitic-hash.github.io/posh` and `victorbee.com/posh`.
 
 ## 8. Android APK
 
@@ -178,8 +181,8 @@ The APK is a debug build, which is fine for a demo. For the Play Store, make a r
 
 The cards are **NXP NTAG213** (NFC Forum Type 2, 144 bytes usable). Each card or plaque holds **one URL record**:
 
-* Card: `https://victorbee.com/posh/#/c/PC-0412-B4-7781`
-* Plaque: `https://victorbee.com/posh/#/p/PP-KLA-0412`
+* Card: `https://enphitic-hash.github.io/posh/#/c/PC-0412-B4-7781`
+* Plaque: `https://enphitic-hash.github.io/posh/#/p/PP-KLA-0412`
 
 The **chip serial number** is registered in Posh Office. The app compares it on every Android read, so a copied link on a different chip shows as **"chip does not match"**.
 
