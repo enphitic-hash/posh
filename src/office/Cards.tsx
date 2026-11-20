@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Plus, Nfc, Ban, CheckCircle2, Copy, Search, Smartphone, ShieldCheck } from 'lucide-react'
+import { Plus, Nfc, QrCode, Printer, Ban, CheckCircle2, Copy, Search, Smartphone, ShieldCheck } from 'lucide-react'
 import { useStore, list } from '../data/store'
 import type { Card as PCard } from '../data/types'
 import { cardUrl, verifyUrl } from '../lib/logic'
 import { fmtDT, fmtTime, nowIso } from '../lib/format'
+import { printCards, qrLinkFor, qrDataUrl } from '../lib/printCard'
 import { readOnce, writeUrl, webNfcSupported, normSerial } from '../lib/nfc'
 import { Card, Stat, Badge, Btn, Sheet, Field, inputCls, toast, cx, Chips, statusTone } from '../components/ui'
 import { PageHead, Table } from './Office'
@@ -20,12 +21,13 @@ export default function Cards() {
   const [q, setQ] = useState(sp.get('q') ?? '')
   const [issue, setIssue] = useState(false)
   const [write, setWrite] = useState<PCard | null>(null)
+  const [qr, setQr] = useState<PCard | null>(null)
   const cards = list(db, 'cards')
   const shown = cards.filter((c) => (tab === 'All' || c.type === tab) && (!q || c.id.toLowerCase().includes(q.toLowerCase()) || c.holder.toLowerCase().includes(q.toLowerCase()))).sort((a, b) => (b.lastTap ?? '').localeCompare(a.lastTap ?? ''))
   const taps = list(db, 'taps').sort((a, b) => b.at.localeCompare(a.at)).slice(0, 14)
   const gateToday = list(db, 'taps').filter((t) => t.kind === 'Gate').length
   return (<>
-    <PageHead title="NFC cards & gates" sub="Resident cards, staff cards and property plaques" actions={<Btn icon={<Plus size={16} />} onClick={() => setIssue(true)}>Issue card</Btn>} />
+    <PageHead title="NFC cards & gates" sub="Resident cards, staff cards and property plaques" actions={<><Btn variant="outline" icon={<Printer size={16} />} onClick={() => printCards(db, shown.slice(0, 24))}>Print cards with QR ({Math.min(24, shown.length)})</Btn><Btn icon={<Plus size={16} />} onClick={() => setIssue(true)}>Issue card</Btn></>} />
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
       <Stat label="Tenant cards" value={cards.filter((c) => c.type === 'Tenant').length} sub={`${cards.filter((c) => c.status === 'Grace period').length} in grace period`} />
       <Stat label="Gate taps today" value={gateToday + 3380} sub="across 38 gates" />
@@ -49,6 +51,7 @@ export default function Cards() {
               <td className="text-muted whitespace-nowrap">{c.lastTap ? fmtDT(c.lastTap) : '—'}</td>
               <td className="whitespace-nowrap">
                 <button title="Write to a card" className="p-1.5 rounded-lg hover:bg-card-2 text-brand" onClick={() => setWrite(c)}><Nfc size={16} /></button>
+                <button title="QR code for phones without NFC" className="p-1.5 rounded-lg hover:bg-card-2 text-brand" onClick={() => setQr(c)}><QrCode size={16} /></button>
                 {c.type !== 'Plaque' && <button title={c.status === 'Blocked' ? 'Unblock' : 'Block'} className="p-1.5 rounded-lg hover:bg-card-2" onClick={() => { patch('cards', c.id, { status: c.status === 'Blocked' ? 'Active' : 'Blocked' }); toast(c.status === 'Blocked' ? 'Card unblocked' : 'Card blocked at all gates') }}>{c.status === 'Blocked' ? <CheckCircle2 size={16} className="text-brand" /> : <Ban size={16} className="text-posh-red" />}</button>}
               </td>
             </tr>)}
@@ -61,8 +64,28 @@ export default function Cards() {
       </Card>
     </div>
     <IssueCard open={issue} onClose={() => setIssue(false)} onCreated={(c) => { setIssue(false); setWrite(c) }} />
+    <Sheet open={!!qr} onClose={() => setQr(null)} title={qr ? `QR code · ${qr.id}` : ''}>{qr && <CardQr c={qr} />}</Sheet>
     <Sheet wide open={!!write} onClose={() => setWrite(null)} title="Write and register card">{write && <WriteCard c={db.cards[write.id] ?? write} />}</Sheet>
   </>)
+}
+
+export function CardQr({ c }: { c: PCard }) {
+  const db = useStore((s) => s.db)
+  const [img, setImg] = useState('')
+  const link = qrLinkFor(c)
+  useEffect(() => { qrDataUrl(link, 520).then(setImg) }, [link])
+  return (
+    <div className="text-center">
+      {img && <img src={img} alt={`QR code for ${c.id}`} className="w-60 h-60 mx-auto rounded-2xl border border-line" />}
+      <div className="font-bold mt-3">{c.holder}</div>
+      <div className="text-sm text-muted">Any phone camera opens the same page as an NFC tap. Printed on the back of the card{c.type === 'Plaque' ? ' and on the plaque' : ''}.</div>
+      <div className="font-mono text-xs bg-card-2 rounded-lg px-3 py-2 mt-3 break-all">{link}</div>
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <Btn icon={<Printer size={16} />} onClick={() => printCards(db, [c])}>Print {c.type === 'Plaque' ? 'plaque' : 'card'}</Btn>
+        <Btn variant="outline" icon={<Copy size={16} />} onClick={() => { navigator.clipboard?.writeText(link); toast('Link copied') }}>Copy link</Btn>
+      </div>
+    </div>
+  )
 }
 
 function IssueCard({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (c: PCard) => void }) {

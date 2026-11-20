@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom'
-import { ShieldCheck, ShieldAlert, FileCheck2, User, Phone, MessageCircle, Building2, HardHat, Landmark, Scale, Handshake, Ruler, ChevronLeft, Nfc, Home } from 'lucide-react'
+import { ShieldCheck, ShieldAlert, FileCheck2, User, Phone, MessageCircle, Building2, HardHat, Landmark, Scale, Handshake, Ruler, ChevronLeft, Nfc, QrCode, Home } from 'lucide-react'
 import { useStore, list } from '../data/store'
 import type { Biz } from '../data/types'
 import { ugxShort, fmtDate, nowIso, uid, ago } from '../lib/format'
@@ -25,7 +25,7 @@ export default function Verify() {
     if (logged.current || !code) return
     logged.current = true
     const plaque = list(db, 'cards').find((c) => c.type === 'Plaque' && c.propertyId === p?.id)
-    put('taps', { id: uid('TP'), cardId: plaque?.id, uid: serial, kind: 'Plaque', place: p ? `${p.title} · ${p.area}` : `Unknown code ${code}`, at: nowIso(), result: p ? 'OK' : 'Unknown card', who: /iPhone|iPad/.test(navigator.userAgent) ? 'Visitor phone (iPhone)' : /Android/.test(navigator.userAgent) ? 'Visitor phone (Android)' : 'Web visitor' })
+    put('taps', { id: uid('TP'), cardId: plaque?.id, uid: serial, kind: 'Plaque', place: (p ? `${p.title} · ${p.area}` : `Unknown code ${code}`) + (sp.get('via') === 'qr' ? ' · QR scan' : sp.get('uid') || sp.get('via') === 'nfc' ? ' · NFC tap' : ''), at: nowIso(), result: p ? 'OK' : 'Unknown card', who: /iPhone|iPad/.test(navigator.userAgent) ? 'Visitor phone (iPhone)' : /Android/.test(navigator.userAgent) ? 'Visitor phone (Android)' : 'Web visitor' })
     if (plaque) useStore.getState().patch('cards', plaque.id, { lastTap: nowIso() })
   }, [code]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -52,6 +52,7 @@ export default function Verify() {
           <div className="flex items-center gap-2 text-sm font-semibold">{chipMismatch ? <ShieldAlert size={18} /> : <ShieldCheck size={18} />}{chipMismatch ? 'Warning: chip does not match' : 'Genuine Posh plaque'}</div>
           <div className="text-3xl font-extrabold mt-2 font-mono tracking-wide">{p.id}</div>
           <div className="text-white/85 mt-1">{p.title} · {p.area}</div>
+          <div className="text-xs mt-2 text-white/80 flex items-center gap-1">{sp.get('via') === 'qr' ? <><QrCode size={14} />Opened by scanning the QR code on the plaque</> : sp.get('via') === 'nfc' || serial ? <><Nfc size={14} />Opened by an NFC tap on the plaque</> : null}</div>
           {serial && <div className="text-xs mt-2 text-white/80 flex items-center gap-1"><Nfc size={14} />Chip {serial} {chipMismatch ? '≠ registered chip' : p.plaqueUid ? '✓ matches our record' : '(no chip registered yet)'}</div>}
         </div>
         <div className="grid grid-cols-2 gap-2 mt-3">

@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Smartphone, LayoutDashboard, ShieldCheck, Nfc, ArrowRight, Wifi, WifiOff } from 'lucide-react'
-import { ThemedLogo, Seal, AppIcon, Card, Btn, inputCls } from './components/ui'
+import { Smartphone, LayoutDashboard, ShieldCheck, Nfc, QrCode, ArrowRight, Wifi, WifiOff } from 'lucide-react'
+import { ThemedLogo, Seal, AppIcon, Card, Btn, inputCls, Sheet } from './components/ui'
+import { parseTarget } from './lib/nfc'
+const QrScanner = lazy(() => import('./components/QrScanner').then((m) => ({ default: m.QrScanner })))
 import { useStore } from './data/store'
 import { CONFIG } from './config'
 import { ThemeQuick } from './components/Settings'
@@ -12,6 +14,7 @@ export default function Landing() {
   const status = useStore((s) => s.status)
   const [qr, setQr] = useState('')
   const [code, setCode] = useState('PP-KLA-0412')
+  const [scan, setScan] = useState(false)
   useEffect(() => {
     const url = location.href.split('#')[0] + '#/app'
     QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: '#136734', light: '#FFFFFF' } }).then(setQr)
@@ -43,6 +46,15 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-6">
+        <Card className="p-5 sm:p-6 grid md:grid-cols-[auto_1fr_auto] gap-5 items-center bg-[linear-gradient(135deg,#1A8043,#062E17)] text-white border-0">
+          <div className="flex gap-2"><span className="w-14 h-14 rounded-2xl bg-white/15 grid place-items-center"><Nfc size={28} /></span><span className="w-14 h-14 rounded-2xl bg-white/15 grid place-items-center"><QrCode size={28} /></span></div>
+          <div><div className="text-xs font-bold tracking-[.25em] text-[#E3B93A]">WORKS WITH EVERY PHONE</div><div className="text-xl font-extrabold mt-1">Tap a Posh card or plaque with NFC, or scan its QR code.</div><div className="text-sm text-white/75 mt-1">iPhone and Android read the NFC chip (NXP NTAG213). Phones without NFC scan the QR printed on the card and plaque. Either way the page opens, the chip or code is checked, and Posh Office sees it live.</div></div>
+          <Btn size="lg" variant="soft" icon={<QrCode size={18} />} onClick={() => setScan(true)}>Scan a QR now</Btn>
+        </Card>
+        <Sheet open={scan} onClose={() => setScan(false)} title="Scan a Posh card or plaque">{scan && <Suspense fallback={null}><QrScanner onResult={(text) => { setScan(false); const t = parseTarget(text); if (!t) return; nav(t.type === 'card' ? `/c/${t.id}?via=qr` : `/p/${t.id}?via=qr`) }} /></Suspense>}</Sheet>
+      </section>
+
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 grid md:grid-cols-3 gap-4">
         <Card className="p-5 flex flex-col gap-3">
           <div className="flex items-center gap-3"><AppIcon className="w-12" /><div><div className="font-bold">Posh app</div><div className="text-sm text-muted">Tenants, buyers, landlords, clients, staff</div></div></div>
@@ -59,7 +71,7 @@ export default function Landing() {
         </Card>
         <Card className="p-5 flex flex-col gap-3">
           <div className="flex items-center gap-3"><div className="w-12 h-12 rounded-2xl bg-gold-soft text-gold grid place-items-center"><ShieldCheck /></div><div><div className="font-bold">Verify a property</div><div className="text-sm text-muted">Tap the plaque or type its number</div></div></div>
-          <p className="text-sm text-muted flex gap-2"><Nfc size={18} className="shrink-0 text-brand" />Hold your phone to the Posh plaque. On iPhone, tap the top of the phone to the plaque.</p>
+          <p className="text-sm text-muted flex gap-2"><Nfc size={18} className="shrink-0 text-brand" />Hold your phone to the Posh plaque (on iPhone, the top of the phone), or scan the QR code on it.</p>
           <form onSubmit={(e) => { e.preventDefault(); nav(`/p/${code.trim().toUpperCase()}`) }} className="flex gap-2 mt-auto">
             <input value={code} onChange={(e) => setCode(e.target.value)} className={inputCls} aria-label="Passport number" />
             <Btn type="submit">Check</Btn>

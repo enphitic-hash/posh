@@ -106,7 +106,6 @@ export function recordPayment(opts: { tenantId: string; amount: number; method: 
   if (opts.method === 'Posh Wallet') st.patch('tenants', t.id, { wallet: Math.max(0, t.wallet - opts.amount) })
   if (t.cardId && opts.via === 'Card tap') {
     st.patch('cards', t.cardId, { lastTap: p.at })
-    st.put('taps', { id: uid('TP'), cardId: t.cardId, kind: 'Pay', place: 'Posh app · rent', at: p.at, result: 'OK', who: t.name })
   }
   const landlord = db.landlords[unit.landlordId]
   sendMessage({ to: t.name, phone: t.phone, channel: 'WhatsApp', kind: 'receipt', text: `Posh Properties: Payment received, ${ugx(p.amount)} for ${monthLabel(p.month, true)} (${unit.estate} ${unit.name}). Receipt ${p.receipt}, ${p.method} ref ${p.ref}. Thank you!` })

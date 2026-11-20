@@ -24,7 +24,7 @@ export default function Dashboard() {
   const vals = list(db, 'valuations').filter((v) => v.status !== 'Done')
   const props = list(db, 'properties')
   const risk = riskList(db, 55).slice(0, 4)
-  const taps = list(db, 'taps').filter((t) => t.kind === 'Plaque').sort((a, b) => b.at.localeCompare(a.at)).slice(0, 5)
+  const taps = list(db, 'taps').sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6)
   const feed = useMemo(() => {
     const items = [
       ...list(db, 'payments').map((p) => ({ at: p.at, text: `${db.tenants[p.tenantId]?.name} paid ${ugx(p.amount)} by ${p.method}`, tone: 'green' as const, k: p.id })),
@@ -84,8 +84,8 @@ export default function Dashboard() {
 
     <div className="grid xl:grid-cols-2 gap-4 mt-4">
       <Card>
-        <div className="flex items-center gap-2 p-5 pb-2"><Nfc size={18} className="text-brand" /><h3 className="font-bold">Latest plaque taps</h3></div>
-        <Table head={['Time', 'Property', 'Who', 'Result']}>
+        <div className="flex items-center gap-2 p-5 pb-2"><Nfc size={18} className="text-brand" /><h3 className="font-bold">Live NFC taps and QR scans</h3><Btn size="sm" variant="soft" className="ml-auto" onClick={() => nav('/office/nfc')}>Open monitor</Btn></div>
+        <Table head={['Time', 'Where', 'Who', 'Result']}>
           {taps.map((t) => <tr key={t.id} className={cx(last?.id === t.id && 'flash')}><td className="text-muted whitespace-nowrap">{fmtTime(t.at)}</td><td className="font-semibold">{t.place}</td><td className="text-muted">{t.who}</td><td><Badge tone={statusTone(t.result)}>{t.result === 'OK' ? 'Genuine' : t.result}</Badge></td></tr>)}
         </Table>
       </Card>

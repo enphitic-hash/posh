@@ -40,6 +40,10 @@ Each card or plaque holds one URL record, for example `https://victorbee.com/pos
 * **Android Chrome** and the **Posh Android app** read the card inside the app (serial + link), and Posh Office can write blank cards (Cards → ⓝ).
 * **Writing from iPhone**: use the NFC Tools app (Write → Add a record → URL), then paste the card's serial number into Posh Office.
 
+**QR codes for phones without NFC**: every card and plaque also carries a QR code with the same link (plus `?via=qr`). Any phone camera opens it. The Posh app, Posh Office (NFC live monitor) and the home page also have a camera scanner, with a "use a photo" fallback. Cards → QR icon shows a card's code; **Print cards with QR** prints CR80 cards (front and back) and plaques.
+
+**NFC live monitor** (`#/office/nfc`): every tap or scan, from any phone, appears at once and pops up on every Office screen, with the holder, chip serial check, home and rent status.
+
 Note: NTAG213 chips can be cloned. For production use NTAG424 DNA (SUN signed links).
 
 ## Develop

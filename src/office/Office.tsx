@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Wallet, Wrench, Users, CreditCard, ShieldCheck, HardHat, Handshake, Scale, Landmark, UserSquare2, MessageSquare, Settings as Cog, LogOut, Menu, X, Wifi, WifiOff, Search, Smartphone, Banknote, Receipt, FileText, ShoppingCart, PieChart, Building2, FileSignature, Truck, Megaphone, IdCard, History } from 'lucide-react'
+import { LayoutDashboard, Wallet, Wrench, Users, CreditCard, ShieldCheck, HardHat, Handshake, Scale, Landmark, UserSquare2, MessageSquare, Settings as Cog, LogOut, Menu, X, Wifi, WifiOff, Search, Smartphone, Banknote, Receipt, FileText, ShoppingCart, PieChart, Building2, FileSignature, Truck, Megaphone, IdCard, History, Nfc } from 'lucide-react'
 import { usePrefs } from '../data/prefs'
 import { useStore, list } from '../data/store'
 import { Avatar, ThemedLogo, LogoH, cx, Card, Btn, inputCls, toast, Field } from '../components/ui'
@@ -13,6 +13,7 @@ import Cards from './Cards'
 import { Passports, PassportDetail } from './Passports'
 import { Construction, Sales, Valuations, Mortgages, Messages } from './Business'
 import { Cashier, Receipts, Invoices, Purchases, Finance, Suppliers } from './Money'
+import NfcLive, { TapAlert } from './NfcLive'
 import { Units, Leases, StaffPage, Broadcast, Activity } from './People'
 
 type NavItem = { to: string; label: string; icon: typeof Wallet; end?: boolean }
@@ -42,7 +43,8 @@ const NAV: { group: string; items: NavItem[] }[] = [
     { to: '/office/suppliers', label: 'Suppliers', icon: Truck },
   ] },
   { group: 'Cards & people', items: [
-    { to: '/office/cards', label: 'NFC cards & gates', icon: CreditCard },
+    { to: '/office/nfc', label: 'NFC live monitor', icon: Nfc },
+    { to: '/office/cards', label: 'NFC cards & QR', icon: CreditCard },
     { to: '/office/messages', label: 'Messages', icon: MessageSquare },
     { to: '/office/broadcast', label: 'Broadcast', icon: Megaphone },
     { to: '/office/staff', label: 'Staff', icon: IdCard },
@@ -189,6 +191,7 @@ export default function Office() {
           <GlobalSearch />
           <div className="flex-1" />
           <span className={cx('hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 h-7 rounded-full', status === 'live' ? 'bg-brand-soft text-brand' : 'bg-gold-soft text-gold')}>{status === 'live' ? <><span className="w-2 h-2 rounded-full bg-brand animate-pulse" /><Wifi size={14} />Live</> : <><WifiOff size={14} />Offline</>}</span>
+          <NavLink to="/office/nfc" className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 h-7 rounded-full bg-brand text-white"><Nfc size={14} />NFC + QR live</NavLink>
           <ThemeQuick />
           <div className="hidden md:flex items-center gap-2"><Avatar name={me.name} size={34} /><div className="leading-tight"><div className="text-sm font-semibold">{me.name}</div><div className="text-xs text-muted">{me.role}</div></div></div>
           <button onClick={() => set({ officeStaffId: undefined })} className="w-10 h-10 grid place-items-center rounded-full hover:bg-card-2" aria-label="Sign out" title="Sign out"><LogOut size={18} /></button>
@@ -208,6 +211,7 @@ export default function Office() {
             <Route path="valuations" element={<Valuations />} />
             <Route path="mortgages" element={<Mortgages />} />
             <Route path="messages" element={<Messages />} />
+            <Route path="nfc" element={<NfcLive />} />
             <Route path="cashier" element={<Cashier />} />
             <Route path="receipts" element={<Receipts />} />
             <Route path="invoices" element={<Invoices />} />
@@ -223,6 +227,7 @@ export default function Office() {
             <Route path="*" element={<Navigate to="/office" replace />} />
           </Routes>
         </main>
+        <TapAlert />
       </div>
     </div>
   )

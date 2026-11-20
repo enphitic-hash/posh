@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Routes, Route, useNavigate, useParams, Navigate, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { printDoc, docFromPayment } from '../lib/docs'
-import { Wallet, Wrench, FileText, Receipt, UserPlus, Nfc, CheckCircle2, Smartphone, CreditCard, Landmark, PiggyBank, Split, Camera, Download, MessageCircle, ShieldCheck, Droplets, Zap, Clock, Plus, X, Printer } from 'lucide-react'
+import { Wallet, Wrench, FileText, Receipt, UserPlus, Nfc, CheckCircle2, Smartphone, CreditCard, Landmark, PiggyBank, Split, Camera, Download, MessageCircle, ShieldCheck, Droplets, Zap, Clock, Plus, X, Printer, QrCode } from 'lucide-react'
 import { useStore, list } from '../data/store'
 import { usePrefs } from '../data/prefs'
 import type { PayMethod, Payment, Repair } from '../data/types'
@@ -154,6 +154,8 @@ function PayFlow() {
   const [step, setStep] = useState<1 | 2 | 3>(cardFromTap ? 2 : 1)
   const [tapped, setTapped] = useState<string | null>(cardFromTap)
   const [nfcOpen, setNfcOpen] = useState(false)
+  const [qrOpen, setQrOpen] = useState(false)
+  const [via, setVia] = useState<'nfc' | 'qr'>('nfc')
   const [method, setMethod] = useState<PayMethod>('MTN MoMo')
   const [split, setSplit] = useState(false)
   const [phone, setPhone] = useState(t.phone)
@@ -175,14 +177,15 @@ function PayFlow() {
     }
   }, [step]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function onTap(serial?: string, target?: ReturnType<typeof parseTarget>) {
+  function onTap(serial?: string, target?: ReturnType<typeof parseTarget>, how: 'nfc' | 'qr' = 'nfc') {
     const c = (target?.type === 'card' && db.cards[target.id]) || list(db, 'cards').find((x) => serial && x.uid === serial)
     if (!c) return toast('That card is not registered with Posh', 'warn')
     if (c.holderId !== t.id) return toast(`That card belongs to ${c.holder}`, 'warn')
     if (c.status === 'Blocked') return toast('This card is blocked. Call the Posh office.', 'warn')
     setTapped(c.id)
     navigator.vibrate?.(60)
-    toast('Posh card read · ' + c.id)
+    toast(`${how === 'qr' ? 'QR scanned' : 'Posh card read by NFC'} · ${c.id}`)
+    useStore.getState().put('taps', { id: uid('TP'), cardId: c.id, uid: serial, kind: 'Pay', place: `${how === 'qr' ? 'QR scan' : 'NFC tap'} · Posh app rent`, at: nowIso(), result: 'OK', who: c.holder })
     setTimeout(() => setStep(2), 600)
   }
 
@@ -206,7 +209,7 @@ function PayFlow() {
             <span className="absolute -inset-2 rounded-3xl border-4 border-brand pulse-card" />
             <PoshCard small name={t.name} number={t.cardId ?? ''} unit={`${unit!.estate.replace('Posh ', '')} ${unit!.name}`} />
           </div>
-          <div className="font-bold mt-2">{tapped ? 'Card read ✓' : 'Hold your Posh card to the back of the phone'}</div>
+          <div className="font-bold mt-2">{tapped ? (via === 'qr' ? 'QR scanned ✓' : 'Card read by NFC ✓') : 'Hold your Posh card to the back of the phone'}</div>
           <div className="text-sm text-muted">{webNfcSupported() ? 'Listening for your card…' : 'Tap here to read your card'}</div>
         </button>
         <Card className="p-4">
@@ -215,8 +218,9 @@ function PayFlow() {
           {due.paid > 0 && <div className="flex justify-between text-sm py-1 text-brand"><span>Paid earlier</span><span>− {num(due.paid)}</span></div>}
           <div className="flex justify-between font-extrabold text-lg border-t border-line pt-2 mt-1"><span>Total</span><span>{ugx(due.balance)}</span></div>
         </Card>
-        <Btn block size="lg" className="mt-4" onClick={() => setStep(2)}>Continue without card</Btn>
-        <NfcSheet open={nfcOpen} onClose={() => setNfcOpen(false)} title="Tap your Posh card" onRead={({ serial, target }) => onTap(serial, target)} />
+        <Btn block size="lg" variant="outline" className="mt-4" icon={<QrCode size={18} />} onClick={() => setQrOpen(true)}>No NFC? Scan the QR on your card</Btn>
+        <Btn block variant="ghost" className="mt-2" onClick={() => setStep(2)}>Continue without card</Btn>
+        <NfcSheet open={nfcOpen || qrOpen} startQr={qrOpen} onClose={() => { setNfcOpen(false); setQrOpen(false) }} title="Your Posh card" onRead={({ serial, target, via }) => { setVia(via); onTap(serial, target, via) }} />
       </>)}
 
       {step === 2 && (<>

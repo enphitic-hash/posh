@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { Routes, Route, NavLink, useNavigate, Navigate, useLocation } from 'react-router-dom'
-import { Home, Wallet, Wrench, FileText, User, Search, Heart, CalendarDays, Landmark, HardHat, ClipboardCheck, BarChart3, Building2, Nfc, ChevronLeft, Bell, LogOut, Settings as Cog, Users, Package, AlertCircle, Camera } from 'lucide-react'
+import { Home, Wallet, Wrench, FileText, User, Search, Heart, CalendarDays, Landmark, HardHat, ClipboardCheck, BarChart3, Building2, Nfc, ChevronLeft, Bell, LogOut, Settings as Cog, Users, Package, AlertCircle, Camera, QrCode } from 'lucide-react'
 import { usePrefs, type Role } from '../data/prefs'
 import { useStore } from '../data/store'
 import { Btn, cx, Card, Sheet, toast, Avatar, ThemedLogo, Svg, inputCls, Field } from '../components/ui'
 import { SettingsPanel } from '../components/Settings'
+import { QrScanner } from '../components/QrScanner'
 import { iconPassport } from '../brand/marks'
 import { readOnce, webNfcSupported, parseTarget, isIOS } from '../lib/nfc'
 import { list } from '../data/store'
@@ -58,49 +59,66 @@ export function Screen({ children, className }: { children: ReactNode; className
 export function NfcButton() {
   const [open, setOpen] = useState(false)
   return (<>
-    <button onClick={() => setOpen(true)} aria-label="Tap a Posh card or plaque" className="w-10 h-10 grid place-items-center rounded-full bg-card border border-line"><Nfc size={18} /></button>
+    <button onClick={() => setOpen(true)} aria-label="Tap or scan a Posh card or plaque" className="w-10 h-10 grid place-items-center rounded-full bg-card border border-line"><Nfc size={18} /></button>
     <NfcSheet open={open} onClose={() => setOpen(false)} />
   </>)
 }
 
-export function NfcSheet({ open, onClose, onRead, title = 'Tap a Posh card or plaque' }: { open: boolean; onClose: () => void; onRead?: (r: { serial?: string; target: ReturnType<typeof parseTarget> }) => void; title?: string }) {
+export type ReadVia = 'nfc' | 'qr'
+export function NfcSheet({ open, onClose, onRead, title = 'Tap or scan a Posh card', startQr }: { open: boolean; onClose: () => void; onRead?: (r: { serial?: string; target: ReturnType<typeof parseTarget>; via: ReadVia }) => void; title?: string; startQr?: boolean }) {
   const nav = useNavigate()
   const [state, setState] = useState<'idle' | 'scan' | 'err'>('idle')
+  const [mode, setMode] = useState<ReadVia>('nfc')
   const [err, setErr] = useState('')
+  const [wasOpen, setWasOpen] = useState(false)
+  if (open !== wasOpen) { setWasOpen(open); if (open) { setMode(startQr || (!webNfcSupported() && !isIOS()) ? 'qr' : 'nfc'); setState('idle'); setErr('') } }
   const db = useStore((s) => s.db)
-  const handle = (serial: string | undefined, target: ReturnType<typeof parseTarget>) => {
+  const close = () => { onClose(); setState('idle') }
+  const handle = (serial: string | undefined, target: ReturnType<typeof parseTarget>, via: ReadVia) => {
     // A card may be identified by its chip serial even if its URL record was never written.
     let t = target
     if (!t && serial) { const c = list(db, 'cards').find((x) => x.uid === serial); if (c) t = c.propertyId && c.type === 'Plaque' ? { type: 'passport', id: c.propertyId } : { type: 'card', id: c.id } }
-    onClose(); setState('idle')
-    if (onRead) return onRead({ serial, target: t })
+    close()
+    if (onRead) return onRead({ serial, target: t, via })
     if (!t) return toast(`Unknown card${serial ? ` (${serial})` : ''}. Ask the Posh office to register it.`, 'warn')
-    nav(t.type === 'card' ? `/c/${t.id}${serial ? `?uid=${encodeURIComponent(serial)}` : ''}` : `/p/${t.id}${serial ? `?uid=${encodeURIComponent(serial)}` : ''}`)
+    const q = new URLSearchParams(); if (serial) q.set('uid', serial); q.set('via', via)
+    nav(t.type === 'card' ? `/c/${t.id}?${q}` : `/p/${t.id}?${q}`)
   }
   const start = async () => {
     setState('scan'); setErr('')
-    try { const r = await readOnce(); handle(r.serial, parseTarget(r.url)) } catch (e) { setState('err'); setErr((e as Error).message) }
+    try { const r = await readOnce(); handle(r.serial, parseTarget(r.url), 'nfc') } catch (e) { setState('err'); setErr((e as Error).message) }
   }
   return (
-    <Sheet open={open} onClose={() => { onClose(); setState('idle') }} title={title}>
-      <div className="flex flex-col items-center text-center gap-4 py-2">
-        <div className="relative w-36 h-36 grid place-items-center">
-          {state === 'scan' && <span className="absolute inset-0 rounded-full border-4 border-brand pulse-ring" />}
-          <div className="w-28 h-28 rounded-full bg-brand-soft text-brand grid place-items-center"><Nfc size={52} /></div>
-        </div>
-        {webNfcSupported() ? (<>
-          <p className="text-sm text-muted">{state === 'scan' ? 'Hold the card flat on the back of your phone…' : 'Press start, then hold the Posh card or plaque to the back of your phone.'}</p>
-          {state !== 'scan' && <Btn block size="lg" onClick={start}>Start reading</Btn>}
-        </>) : (
-          <p className="text-sm text-muted">{isIOS() ? 'On iPhone: lock nothing, just hold the top edge of the iPhone to the card. A Posh notification appears; tap it to open.' : 'This browser cannot read NFC. Use Chrome on Android, the Posh Android app, or an iPhone tap.'}</p>
-        )}
-        {err && <p className="text-sm text-posh-red">{err}</p>}
-        <div className="w-full border-t border-line pt-3">
-          <div className="text-xs text-muted mb-2">No card to hand? Try the demo ones:</div>
-          <div className="grid grid-cols-2 gap-2">
-            <Btn variant="outline" size="sm" onClick={() => handle('04:73:D4:CA:04:19:90', { type: 'card', id: 'PC-0412-B4-7781' })}>Nakato's Posh card</Btn>
-            <Btn variant="outline" size="sm" onClick={() => handle(undefined, { type: 'passport', id: 'PP-KLA-0412' })}>Kiwatule plaque</Btn>
+    <Sheet open={open} onClose={close} title={title}>
+      <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-card-2 mb-4">
+        {(['nfc', 'qr'] as const).map((m) => <button key={m} onClick={() => { setMode(m); setState('idle') }} className={cx('h-10 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2', mode === m ? 'bg-card shadow-sm text-ink' : 'text-muted')}>{m === 'nfc' ? <><Nfc size={16} />Tap card (NFC)</> : <><QrCode size={16} />Scan QR code</>}</button>)}
+      </div>
+      {mode === 'qr' ? (
+        <QrScanner hint="Point the camera at the QR code on the back of the Posh card, or on the plaque." onResult={(text) => {
+          const t = parseTarget(text)
+          if (!t) { toast('That QR code is not a Posh card or plaque', 'warn'); return }
+          handle(undefined, t, 'qr')
+        }} />
+      ) : (
+        <div className="flex flex-col items-center text-center gap-4 py-2">
+          <div className="relative w-36 h-36 grid place-items-center">
+            {state === 'scan' && <span className="absolute inset-0 rounded-full border-4 border-brand pulse-ring" />}
+            <div className="w-28 h-28 rounded-full bg-brand-soft text-brand grid place-items-center"><Nfc size={52} /></div>
           </div>
+          {webNfcSupported() ? (<>
+            <p className="text-sm text-muted">{state === 'scan' ? 'Hold the card flat on the back of your phone…' : 'Press start, then hold the Posh card or plaque to the back of your phone.'}</p>
+            {state !== 'scan' && <Btn block size="lg" onClick={start}>Start reading</Btn>}
+          </>) : (
+            <p className="text-sm text-muted">{isIOS() ? 'On iPhone, just hold the top edge of the iPhone to the card. A Posh notification appears; tap it to open.' : 'This phone cannot read NFC here.'} No NFC? Use <button className="text-brand font-semibold" onClick={() => setMode('qr')}>Scan QR code</button>.</p>
+          )}
+          {err && <p className="text-sm text-posh-red">{err}</p>}
+        </div>
+      )}
+      <div className="w-full border-t border-line pt-3 mt-4 text-center">
+        <div className="text-xs text-muted mb-2">No card to hand? Try the demo ones:</div>
+        <div className="grid grid-cols-2 gap-2">
+          <Btn variant="outline" size="sm" onClick={() => handle('04:73:D4:CA:04:19:90', { type: 'card', id: 'PC-0412-B4-7781' }, mode)}>Nakato's Posh card</Btn>
+          <Btn variant="outline" size="sm" onClick={() => handle(undefined, { type: 'passport', id: 'PP-KLA-0412' }, mode)}>Kiwatule plaque</Btn>
         </div>
       </div>
     </Sheet>
