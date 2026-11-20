@@ -17,12 +17,14 @@ Every screen has **Settings** with light, dark or phone theme, 4 text sizes and 
 
 ### Demo logins
 
-| Who | How |
-|---|---|
-| Tenant Nakato Sarah (Naguru Heights B4) | Phone `+256 772 300 412`, PIN `1234` |
-| MoMo / Airtel approval | PIN `1234` |
-| Card payments | `4111 1111 1111 1111` |
-| Posh Office: Hajji Issa Bukenya | PIN `2024` (other staff PINs are shown on the login screen) |
+Any phone number and any 4-digit PIN sign in (a number that isn't a tenant opens the demo tenant, Nakato Sarah). In Posh Office pick any staff member, or "Someone else" and type any name, with any PIN. MoMo, Airtel and card PINs in the payment flows are any 4 digits. No real money moves.
+
+### Money and receipts (Posh Office)
+
+* **Cashier**: take payment for rent, house and plot sales, commission, construction stages, design, renovation, valuation, survey, short stays, deposits, mortgage advisory or anything typed in. Each payment walks through the real steps: MTN MoMo / Airtel prompt with the customer's PIN, card on the POS, bank transfer, cash with change, or cheque.
+* **Receipts on everything**: every sale prints a receipt (80mm receipt printer or A4), PDF, WhatsApp or SMS, with a QR code that opens `#/r/<number>` to prove it's genuine.
+* **Purchases & expenses**: anything Posh buys (cement, fuel, Yaka, wages, office supplies, landlord payouts) gets a printable payment voucher with signature lines, an optional photo of the supplier's receipt, and can be bought on credit and paid later.
+* **Invoices**, **Receipts register** (search, reprint, CSV), **Finance** (money in/out, net, cash book by method, by business and expense type, six months), **Suppliers**, **Units & vacancies** (let a unit, take deposit, move out), **Leases** (renew with increase), **Staff**, **Broadcast** (WhatsApp/SMS to groups), **Activity log**. Sales deals, construction stages and valuations have "Take payment" buttons too.
 
 ## Live data
 

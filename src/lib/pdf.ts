@@ -12,7 +12,7 @@ const MUTED: [number, number, number] = [95, 107, 99]
 let logoCache: string | null = null
 async function logo() {
   if (logoCache) return logoCache
-  const res = await fetch(new URL('brand/logo-horizontal.png', document.baseURI).href)
+  const res = await fetch(new URL('brand/logo-company.png', document.baseURI).href)
   const blob = await res.blob()
   logoCache = await new Promise<string>((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result as string); fr.readAsDataURL(blob) })
   return logoCache
@@ -90,4 +90,43 @@ export async function statementPdf(db: DB, landlordId: string, month: string) {
   row(`Paid to you on the ${l.payoutDay}th`, ugx(gross - fee), true)
   footer(doc, 'Receipts and leases are attached in the Posh app. Figures are for your URA rental income return.')
   doc.save(`Posh-statement-${l.name.replace(/\W+/g, '-')}-${month}.pdf`)
+}
+
+/** PDF of any receipt, payment voucher or invoice. */
+export async function docPdf(d: import('./docs').PDoc) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  const title = d.type === 'INVOICE' ? `Invoice ${d.no}` : d.type === 'RECEIPT' ? `Receipt ${d.no}` : `Payment voucher ${d.no}`
+  await header(doc, title, `${fmtDT(d.at)} · ${d.business}${d.category ? ' · ' + d.category : ''}`)
+  let y = 62
+  const kv = (a: string, b: string) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...MUTED); doc.text(a, 15, y); doc.setTextColor(...INK); doc.text(b, 195, y, { align: 'right' }); y += 6.5 }
+  kv(d.partyLabel ?? (d.type === 'PAYMENT VOUCHER' ? 'Paid to' : 'Received from'), d.party)
+  if (d.phone) kv('Phone', d.phone)
+  ;(d.extra ?? []).forEach(([a, b]) => kv(a, b))
+  if (d.due) kv('Due by', fmtDate(d.due))
+  if (d.type !== 'INVOICE') { kv('Method', d.method ?? ''); kv('Reference', d.ref ?? '') }
+  if (d.tendered) { kv('Cash given', ugx(d.tendered)); kv('Change', ugx(d.change ?? 0)) }
+  y += 4
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...MUTED)
+  doc.text('Description', 15, y); doc.text('Qty', 130, y, { align: 'right' }); doc.text('Unit price', 160, y, { align: 'right' }); doc.text('Amount', 195, y, { align: 'right' })
+  doc.setDrawColor(...GREEN); doc.setLineWidth(0.6); doc.line(15, y + 2, 195, y + 2); doc.setLineWidth(0.2); y += 8
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(...INK); doc.setFontSize(10)
+  for (const l of d.lines) {
+    const desc = doc.splitTextToSize(l.desc, 100) as string[]
+    doc.text(desc, 15, y); doc.text(num(l.qty), 130, y, { align: 'right' }); doc.text(num(l.price), 160, y, { align: 'right' }); doc.text(num(l.qty * l.price), 195, y, { align: 'right' })
+    y += 5 * desc.length + 2
+    if (y > 240) { doc.addPage(); y = 20 }
+  }
+  doc.setDrawColor(225, 231, 224); doc.line(15, y, 195, y); y += 7
+  const sum = (a: string, b: string, bold = false) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(bold ? 13 : 10); doc.text(a, 120, y); doc.text(b, 195, y, { align: 'right' }); y += bold ? 8 : 6 }
+  sum('Total', ugx(d.total), true)
+  if (d.type === 'INVOICE') { sum('Paid so far', ugx(d.paid)); sum('Balance due', ugx(d.balance), true) }
+  else if (d.balance) { sum('Paid now', ugx(d.paid)); sum('Balance', ugx(d.balance)) }
+  const stamp = d.type === 'INVOICE' ? (d.balance === 0 ? 'PAID' : d.paid ? 'PART PAID' : 'UNPAID') : d.balance > 0 ? 'PART PAYMENT' : 'PAID'
+  doc.setDrawColor(...GREEN); doc.setTextColor(...GREEN); doc.setLineWidth(0.8); doc.roundedRect(15, y, 50, 13, 2, 2); doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.text(stamp, 40, y + 8.7, { align: 'center' }); doc.setLineWidth(0.2)
+  y += 22
+  if (d.note) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUTED); doc.text(doc.splitTextToSize('Note: ' + d.note, 180), 15, y); y += 10 }
+  if (d.type === 'INVOICE') { doc.setFontSize(9); doc.setTextColor(...MUTED); doc.text(doc.splitTextToSize(`Pay to ${CONFIG.company.bank.holder}, ${CONFIG.company.bank.name}, ${CONFIG.company.bank.branch}, account ${CONFIG.company.bank.account}. MTN MoMo ${CONFIG.company.momo.mtn}. Quote ${d.no}.`, 180), 15, y) }
+  if (d.type === 'PAYMENT VOUCHER') { y += 14; doc.setTextColor(...MUTED); doc.setFontSize(9); ['Prepared by ' + d.by, 'Approved by', 'Received by (sign)'].forEach((s, i) => { doc.line(15 + i * 62, y, 70 + i * 62, y); doc.text(s, 15 + i * 62, y + 5) }) }
+  footer(doc, `${d.no} · served by ${d.by} · TIN ${CONFIG.company.tin}`)
+  doc.save(`Posh-${d.no}.pdf`)
 }

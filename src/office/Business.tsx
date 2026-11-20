@@ -8,6 +8,7 @@ import { sendMessage, waLink } from '../lib/logic'
 import { Card, Stat, Badge, Btn, Progress, statusTone, Sheet, Field, inputCls, toast, cx, Chips, PhotoTile } from '../components/ui'
 import { PageHead, Table } from './Office'
 import { price } from '../app/Buyer'
+import { TxnFlow, type TxnPreset } from './Money'
 
 export function Construction() {
   const db = useStore((s) => s.db)
@@ -15,6 +16,7 @@ export function Construction() {
   const sites = list(db, 'sites')
   const sel = sp.get('id') ? db.sites[sp.get('id')!] : undefined
   const workers = list(db, 'workers')
+  const [pay, setPay] = useState<{ preset: TxnPreset; siteId: string; stage: string } | null>(null)
   return (<>
     <PageHead title="Construction" sub={`${sites.length} active sites · ${sites.filter((s) => s.daysLate).length} behind`} />
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
@@ -39,7 +41,7 @@ export function Construction() {
             <Card className="p-3"><div className="text-xs text-muted">Photos</div><b>{sel.photos}</b></Card>
           </div>
           <Field label={`Progress: ${sel.progress}%`}><input type="range" min={0} max={100} value={sel.progress} onChange={(e) => useStore.getState().patch('sites', sel.id, { progress: +e.target.value })} className="w-full accent-[var(--brand)]" /></Field>
-          {sel.stages.length > 0 && <div><div className="font-bold text-sm mb-1">Stage payments</div><Table head={['Stage', 'Amount', 'Status', 'Paid']}>{sel.stages.map((st) => <tr key={st.name}><td>{st.name}</td><td>{ugx(st.amount)}</td><td><Badge tone={statusTone(st.status)}>{st.status}</Badge></td><td className="text-muted text-xs">{st.paidOn ? `${fmtDate(st.paidOn)} · ${st.method}` : ''}</td></tr>)}</Table></div>}
+          {sel.stages.length > 0 && <div><div className="font-bold text-sm mb-1">Stage payments</div><Table head={['Stage', 'Amount', 'Status', 'Paid']}>{sel.stages.map((st) => <tr key={st.name}><td>{st.name}</td><td>{ugx(st.amount)}</td><td><Badge tone={statusTone(st.status)}>{st.status}</Badge></td><td className="text-muted text-xs">{st.paidOn ? `${fmtDate(st.paidOn)} · ${st.method}` : st.status !== 'Paid' ? <Btn size="sm" onClick={() => setPay({ siteId: sel.id, stage: st.name, preset: { category: 'Construction stage', business: 'Construction', party: sel.client, phone: sel.clientPhone, propertyId: sel.propertyId, lines: [{ desc: `${st.name} stage · ${sel.name}`, qty: 1, price: st.amount }] } })}>Take payment</Btn> : ''}</td></tr>)}</Table></div>}
           {ws.length > 0 && <div><div className="font-bold text-sm mb-1 flex items-center gap-1"><Users size={14} />Crew today ({ws.filter((w) => w.in && !w.out).length}/{ws.length})</div><div className="flex flex-wrap gap-1">{ws.map((w) => <Badge key={w.id} tone={w.in && !w.out ? (w.late ? 'red' : 'green') : 'gray'}>{w.name.split(' ')[1] ?? w.name} {w.in ? fmtTime(w.in) : ''}</Badge>)}</div></div>}
           {sel.materials.length > 0 && <div><div className="font-bold text-sm mb-1 flex items-center gap-1"><Package size={14} />Materials</div><div className="flex flex-wrap gap-1">{sel.materials.map((m, i) => <Badge key={i} tone={statusTone(m.status)}>{m.item} · {m.qty} · {m.status}</Badge>)}</div></div>}
           <div><div className="font-bold text-sm mb-1 flex items-center gap-1"><AlertCircle size={14} />Issues</div>{sel.issues.length ? sel.issues.map((i) => <div key={i.id} className="flex gap-2 items-center text-sm py-1">{i.photo && <img src={i.photo} alt="" className="w-10 h-10 rounded object-cover" />}<span className="flex-1">{i.text}</span><span className="text-xs text-muted">{ago(i.at)}</span><Badge tone={i.open ? 'red' : 'green'}>{i.open ? 'Open' : 'Resolved'}</Badge></div>) : <div className="text-sm text-muted">None</div>}</div>
@@ -47,6 +49,7 @@ export function Construction() {
           <Btn variant="outline" icon={<MessageCircle size={16} />} onClick={() => window.open(waLink(sel.clientPhone, `Hello ${sel.client}, update from Posh Construction on ${sel.name}: ${sel.progress}% complete.`), '_blank')}>WhatsApp the client</Btn>
         </div>)
     })()}</Sheet>
+    <TxnFlow open={!!pay} dir="in" preset={pay?.preset} onClose={() => setPay(null)} onSaved={(t) => { if (!pay) return; const site = useStore.getState().db.sites[pay.siteId]; useStore.getState().patch('sites', site.id, { paid: site.paid + t.paid, stages: site.stages.map((x) => (x.name === pay.stage ? { ...x, status: t.paid >= x.amount ? 'Paid' : 'Due', paidOn: t.paid >= x.amount ? t.at : undefined, method: t.method } : x)), updates: [...site.updates, { at: t.at, text: `Payment received: ${ugx(t.paid)} for ${pay.stage} (receipt ${t.no}). Thank you!` }] }); sendMessage({ to: site.client, phone: site.clientPhone, channel: 'WhatsApp', kind: 'receipt', text: `Posh Construction: we received ${ugx(t.paid)} for ${pay.stage} on ${site.name}. Receipt ${t.no}.` }) }} />
   </>)
 }
 
@@ -57,6 +60,7 @@ export function Sales() {
   const last = useStore((s) => s.lastChange)
   const [tab, setTab] = useState<'Pipeline' | 'Viewings' | 'Listings'>('Pipeline')
   const [add, setAdd] = useState(false)
+  const [pay, setPay] = useState<TxnPreset | null>(null)
   const deals = list(db, 'deals').sort((a, b) => b.updated.localeCompare(a.updated))
   const views = list(db, 'viewings').sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   return (<>
@@ -72,6 +76,7 @@ export function Sales() {
                 <div className="text-xs text-muted">{d.title}</div>
                 <div className="flex items-center gap-1 mt-2"><Badge>{d.source}</Badge><span className="text-xs text-muted ml-auto">{ago(d.updated)}</span></div>
                 {st !== 'Closed' && <div className="flex gap-1 mt-2"><Btn size="sm" variant="soft" onClick={() => { patch('deals', d.id, { stage: STAGES[STAGES.indexOf(st) + 1], updated: nowIso() }); toast(`${d.client} moved to ${STAGES[STAGES.indexOf(st) + 1]}`) }}>→ {STAGES[STAGES.indexOf(st) + 1]}</Btn><Btn size="sm" variant="ghost" onClick={() => window.open(waLink(d.phone, `Hello ${d.client}, this is Posh Properties about the ${d.title}.`), '_blank')}><MessageCircle size={14} /></Btn></div>}
+                {(st === 'Offer' || st === 'Closed') && <Btn size="sm" variant={st === 'Closed' ? 'soft' : 'outline'} className="mt-2 w-full" onClick={() => { const l = d.listingId ? db.listings[d.listingId] : undefined; const rent = l?.kind === 'Rent' || l?.kind === 'Short stay'; setPay({ category: rent ? 'Security deposit' : l?.kind === 'Land' ? 'Plot sale' : st === 'Closed' ? 'Sales commission' : 'Property sale deposit', business: rent ? 'Management' : 'Sales', party: d.client, phone: d.phone, propertyId: l?.propertyId, lines: [{ desc: `${st === 'Closed' && !rent ? 'Commission' : rent ? 'Deposit and first month' : 'Deposit'} · ${d.title}`, qty: 1, price: rent ? (l?.price ?? d.value) * 2 : st === 'Closed' ? d.value : Math.round(((l?.price ?? d.value * 33) * 0.1) / 100000) * 100000 }] }) }}>Take payment · receipt</Btn>}
               </Card>))}</div>
           </div>) })}
       </div>
@@ -86,6 +91,7 @@ export function Sales() {
         <Card key={l.id} className="overflow-hidden"><PhotoTile hue={l.hue} className="h-28">{l.verified && <Badge className="absolute top-2 left-2 !bg-brand !text-white">Verified</Badge>}</PhotoTile><div className="p-3"><div className="font-semibold text-sm">{l.title} · {l.area}</div><div className="text-xs text-muted">{l.kind} · {l.id}</div><div className="font-bold text-brand mt-1">{price(l)}</div><div className="text-xs text-muted mt-1">{views.filter((v) => v.listingId === l.id).length} viewings · {deals.filter((d) => d.listingId === l.id).length} leads</div></div></Card>))}</div>
     )}
     <NewListing open={add} onClose={() => setAdd(false)} />
+    <TxnFlow open={!!pay} dir="in" preset={pay ?? undefined} onClose={() => setPay(null)} />
   </>)
 }
 
@@ -115,12 +121,14 @@ export function Valuations() {
   const db = useStore((s) => s.db)
   const patch = useStore((s) => s.patch)
   const vs = list(db, 'valuations').sort((a, b) => a.due.localeCompare(b.due))
+  const [pay, setPay] = useState<TxnPreset | null>(null)
   return (<>
     <PageHead title="Valuations" sub={`Posh Valuers · ${vs.filter((v) => v.status !== 'Done').length} open · ${vs.filter((v) => v.bank).length} for banks`} />
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">{VSTEPS.map((s) => <Stat key={s} label={s} value={vs.filter((v) => v.status === s).length} />)}</div>
     <Card><Table head={['Ref', 'Property', 'Client', 'Purpose', 'Bank', 'Due', 'Value', 'Status', '']}>
-      {vs.map((v) => { const p = db.properties[v.propertyId]; const next = VSTEPS[VSTEPS.indexOf(v.status) + 1]; return <tr key={v.id}><td className="font-mono text-xs">{v.id}</td><td>{p?.title}<div className="text-xs text-muted">{p?.area}</div></td><td>{v.client}</td><td>{v.purpose}</td><td>{v.bank ?? '—'}</td><td className="whitespace-nowrap">{fmtDate(v.due, { day: 'numeric', month: 'short' })}</td><td>{v.value ? ugxShort(v.value) : '—'}</td><td><Badge tone={statusTone(v.status)}>{v.status}</Badge></td><td>{next && <Btn size="sm" variant="soft" onClick={() => { const value = next === 'Done' ? (v.value ?? p?.value) : v.value; patch('valuations', v.id, { status: next, value }); if (next === 'Done' && p) patch('properties', p.id, { timeline: [...p.timeline, { date: nowIso().slice(0, 10), biz: 'Valuation', title: `Valued at ${ugxShort(value ?? 0)}`, detail: `Posh Valuers report${v.bank ? ` for ${v.bank}` : ''}.` }] }); toast(`${v.id} → ${next}`) }}>→ {next}</Btn>}</td></tr> })}
+      {vs.map((v) => { const p = db.properties[v.propertyId]; const next = VSTEPS[VSTEPS.indexOf(v.status) + 1]; return <tr key={v.id}><td className="font-mono text-xs">{v.id}</td><td>{p?.title}<div className="text-xs text-muted">{p?.area}</div></td><td>{v.client}</td><td>{v.purpose}</td><td>{v.bank ?? '—'}</td><td className="whitespace-nowrap">{fmtDate(v.due, { day: 'numeric', month: 'short' })}</td><td>{v.value ? ugxShort(v.value) : '—'}</td><td><Badge tone={statusTone(v.status)}>{v.status}</Badge></td><td>{next && <Btn size="sm" variant="soft" onClick={() => { const value = next === 'Done' ? (v.value ?? p?.value) : v.value; patch('valuations', v.id, { status: next, value }); if (next === 'Done' && p) patch('properties', p.id, { timeline: [...p.timeline, { date: nowIso().slice(0, 10), biz: 'Valuation', title: `Valued at ${ugxShort(value ?? 0)}`, detail: `Posh Valuers report${v.bank ? ` for ${v.bank}` : ''}.` }] }); toast(`${v.id} → ${next}`) }}>→ {next}</Btn>} <Btn size="sm" variant="ghost" onClick={() => setPay({ category: 'Valuation fee', business: 'Valuation', party: v.client, phone: undefined, propertyId: v.propertyId, lines: [{ desc: `Valuation report ${v.id}${v.bank ? ` for ${v.bank}` : ''} · ${p?.title ?? ''}`, qty: 1, price: (v.value ?? p?.value ?? 300000000) > 500000000 ? 3500000 : 2400000 }] })}>Fee</Btn></td></tr> })}
     </Table></Card>
+    <TxnFlow open={!!pay} dir="in" preset={pay ?? undefined} onClose={() => setPay(null)} />
   </>)
 }
 

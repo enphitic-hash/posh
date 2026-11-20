@@ -1,4 +1,4 @@
-import type { DB, Property, Unit, Tenant, Payment, Card, Tap, Listing, Repair, Site, Worker, Deal, Valuation, Mortgage, Technician, Landlord, Staff, Viewing, Message } from './types'
+import type { Txn, Invoice, DB, Property, Unit, Tenant, Payment, Card, Tap, Listing, Repair, Site, Worker, Deal, Valuation, Mortgage, Technician, Landlord, Staff, Viewing, Message } from './types'
 
 // Deterministic pseudo-random so every reseed gives the same demo data.
 let s = 20261124
@@ -21,7 +21,7 @@ function phone() { return '+256 7' + pick(['72', '74', '75', '01', '03', '06', '
 
 export function makeSeed(): DB {
   s = 20261124
-  const db: DB = { properties: {}, landlords: {}, units: {}, tenants: {}, payments: {}, technicians: {}, repairs: {}, listings: {}, viewings: {}, cards: {}, taps: {}, sites: {}, workers: {}, valuations: {}, mortgages: {}, deals: {}, checkpoints: {}, messages: {}, staff: {} }
+  const db: DB = { properties: {}, landlords: {}, units: {}, tenants: {}, payments: {}, technicians: {}, repairs: {}, listings: {}, viewings: {}, cards: {}, taps: {}, sites: {}, workers: {}, valuations: {}, mortgages: {}, deals: {}, checkpoints: {}, messages: {}, staff: {}, txns: {}, invoices: {}, suppliers: {}, audit: {} }
 
   // ---------- Staff (Posh Office logins) ----------
   const staff: Staff[] = [
@@ -302,6 +302,52 @@ export function makeSeed(): DB {
   ]
   msgs.forEach((x) => (db.messages[x.id] = x))
 
+  // ---------- Suppliers ----------
+  const sups = [
+    ['SUP-1', 'Hima Cement depot, Kireka', 'Building materials', '+256 772 400 120', 'Ronald'],
+    ['SUP-2', 'Roofings Ltd, Namanve', 'Steel & roofing', '+256 414 288 900', 'Sales desk'],
+    ['SUP-3', 'Shell Bukoto', 'Fuel', '+256 701 330 455', 'Station manager'],
+    ['SUP-4', 'Kampala Sand & Aggregates', 'Building materials', '+256 782 900 311', 'Moses'],
+    ['SUP-5', 'Umeme / Yaka', 'Utilities', '0800 285 285', 'Customer care'],
+    ['SUP-6', 'NWSC', 'Utilities', '0800 200 977', 'Customer care'],
+    ['SUP-7', 'Game Stores Lugogo', 'Office supplies', '+256 312 200 700', 'Business desk'],
+    ['SUP-8', 'Sam Wasswa Plumbing', 'Repairs contractor', '+256 772 551 902', 'Sam'],
+  ]
+  sups.forEach(([id, name, category, ph, contact]) => (db.suppliers[id] = { id, name, category, phone: ph, contact, terms: category === 'Utilities' ? 'Prepaid' : '30 days' }))
+
+  // ---------- Finance: receipts (money in) and vouchers (money out) ----------
+  let rn = 5100, vn = 2200
+  const T = (t: Omit<Txn, 'id' | 'no' | 'paid' | 'status' | 'total'> & { paid?: number }) => {
+    const total = t.lines.reduce((a, l) => a + l.qty * l.price, 0)
+    const no = t.dir === 'in' ? `SR-${++rn}` : `PV-${++vn}`
+    db.txns[no] = { id: no, no, total, paid: t.paid ?? total, status: (t.paid ?? total) < total ? 'Part' : 'Paid', ...t }
+  }
+  T({ dir: 'in', category: 'Property sale deposit', business: 'Sales', party: 'Edward Asiimwe', phone: '+256 701 909 112', lines: [{ desc: '10% deposit · 4-bed bungalow, Najjera II (PP-KLA-0631)', qty: 1, price: 78000000 }], method: 'Bank transfer', ref: 'STB-778120', at: '2026-11-12T11:20:00+03:00', by: 'Diana Atuhaire', propertyId: 'PP-KLA-0631' })
+  T({ dir: 'in', category: 'Plot sale', business: 'Sales', party: 'Faith Nalwoga', phone: '+256 774 118 902', lines: [{ desc: 'Residential plot, Gayaza Hills 50x100 · full payment', qty: 1, price: 95000000 }], method: 'Bank transfer', ref: 'CEN-44102', at: '2026-11-06T15:05:00+03:00', by: 'Diana Atuhaire', propertyId: 'PP-KLA-0905' })
+  T({ dir: 'in', category: 'Sales commission', business: 'Sales', party: 'Patience Nabirye', phone: '+256 772 640 811', lines: [{ desc: 'Agency commission 3% · Muyenga house', qty: 1, price: 69000000 }], paid: 34500000, method: 'Bank transfer', ref: 'ABS-99012', at: '2026-11-15T10:00:00+03:00', by: 'Hajji Issa Bukenya' })
+  T({ dir: 'in', category: 'Construction stage', business: 'Construction', party: 'Joan Atuhaire', phone: '+44 7700 900 118', lines: [{ desc: 'Ring beam and walls stage · Kira-Mulawa 77', qty: 1, price: 160000000 }], method: 'Visa', ref: 'VISA-3DS-55120', at: '2026-10-02T09:10:00+03:00', by: 'Eng. Paul Okello' })
+  T({ dir: 'in', category: 'Valuation fee', business: 'Valuation', party: 'Henry Mukasa', phone: '+44 7700 900 412', lines: [{ desc: 'Valuation report for Stanbic · PP-KLA-0412', qty: 1, price: 2900000 }], method: 'MTN MoMo', ref: 'MP2611048812', at: '2026-11-04T16:40:00+03:00', by: 'Grace Namubiru' })
+  T({ dir: 'in', category: 'Survey fee', business: 'Survey', party: 'Mukasa Holdings', phone: '+256 772 001 223', lines: [{ desc: 'Boundary opening, Gayaza Rd plot', qty: 1, price: 1800000 }], method: 'Cash', ref: 'CASH', at: '2026-11-18T12:30:00+03:00', by: 'Grace Namubiru' })
+  T({ dir: 'in', category: 'Mortgage advisory fee', business: 'Finance', party: 'Edward Asiimwe', phone: '+256 701 909 112', lines: [{ desc: 'Posh Home Finance arrangement fee (PHF-2291)', qty: 1, price: 2500000 }], method: 'Airtel Money', ref: 'AM26110871X', at: '2026-11-17T14:15:00+03:00', by: 'Grace Namubiru' })
+  T({ dir: 'in', category: 'Short stay', business: 'Management', party: 'Michael Ochieng', phone: '+254 722 300 118', lines: [{ desc: 'Furnished 2-bed Kololo · nights', qty: 4, price: 280000 }], method: 'Mastercard', ref: 'MC-88121', at: '2026-11-19T19:30:00+03:00', by: 'Grace Namubiru' })
+  T({ dir: 'out', category: 'Building materials', business: 'Construction', party: 'Hima Cement depot, Kireka', supplierId: 'SUP-1', lines: [{ desc: 'Hima cement 50kg', qty: 120, price: 34000 }], method: 'Bank transfer', ref: 'STB-OUT-1182', at: '2026-11-19T08:30:00+03:00', by: 'Eng. Paul Okello', note: 'Kira-Mulawa 77 roof slab' })
+  T({ dir: 'out', category: 'Building materials', business: 'Construction', party: 'Roofings Ltd, Namanve', supplierId: 'SUP-2', lines: [{ desc: 'Steel Y12 bars (tonne)', qty: 2.4, price: 4200000 }], method: 'Bank transfer', ref: 'STB-OUT-1185', at: '2026-11-20T09:00:00+03:00', by: 'Eng. Paul Okello' })
+  T({ dir: 'out', category: 'Fuel', business: 'Management', party: 'Shell Bukoto', supplierId: 'SUP-3', lines: [{ desc: 'Diesel for Naguru Heights generator (litres)', qty: 200, price: 5150 }], method: 'MTN MoMo', ref: 'MP2611190033', at: '2026-11-19T10:20:00+03:00', by: 'Moses Kizza' })
+  T({ dir: 'out', category: 'Utilities', business: 'Management', party: 'Umeme / Yaka', supplierId: 'SUP-5', lines: [{ desc: 'Yaka units, common areas Naguru Heights', qty: 1, price: 300000 }], method: 'MTN MoMo', ref: 'YK-55120988', at: '2026-11-16T07:45:00+03:00', by: 'Moses Kizza' })
+  T({ dir: 'out', category: 'Repairs', business: 'Management', party: 'Sam Wasswa Plumbing', supplierId: 'SUP-8', lines: [{ desc: 'Plumbing jobs (Nov week 2)', qty: 3, price: 85000 }], method: 'MTN MoMo', ref: 'MP2611150912', at: '2026-11-15T17:00:00+03:00', by: 'Grace Namubiru' })
+  T({ dir: 'out', category: 'Wages', business: 'Construction', party: 'Site crew · Kira-Mulawa 77', lines: [{ desc: 'Daily wages (workers x days)', qty: 14 * 5, price: 45000 }], method: 'MTN MoMo', ref: 'BULK-2611-14', at: '2026-11-14T17:30:00+03:00', by: 'Eng. Paul Okello' })
+  T({ dir: 'out', category: 'Office supplies', business: 'Office', party: 'Game Stores Lugogo', supplierId: 'SUP-7', lines: [{ desc: 'Printer paper (reams)', qty: 10, price: 28000 }, { desc: 'Thermal receipt rolls', qty: 20, price: 6500 }, { desc: 'Toner cartridge', qty: 1, price: 380000 }], method: 'Cash', ref: 'CASH', at: '2026-11-11T13:00:00+03:00', by: 'Grace Namubiru' })
+  T({ dir: 'out', category: 'Blank NFC cards', business: 'Office', party: 'Card supplier (NTAG213)', lines: [{ desc: 'NTAG213 PVC cards', qty: 500, price: 3500 }, { desc: 'Metal plaques with NFC', qty: 50, price: 45000 }], method: 'Bank transfer', ref: 'STB-OUT-1170', at: '2026-11-08T11:00:00+03:00', by: 'Hajji Issa Bukenya' })
+  T({ dir: 'out', category: 'Salaries', business: 'Office', party: 'Posh staff payroll · October', lines: [{ desc: 'Net salaries', qty: 1, price: 38500000 }, { desc: 'PAYE and NSSF', qty: 1, price: 9200000 }], method: 'Bank transfer', ref: 'PAYROLL-2610', at: '2026-10-28T10:00:00+03:00', by: 'Hajji Issa Bukenya' })
+
+  // ---------- Invoices ----------
+  const inv = (i: Omit<Invoice, 'total' | 'status'>) => { const total = i.lines.reduce((a, l) => a + l.qty * l.price, 0); db.invoices[i.id] = { ...i, total, status: i.paid >= total ? 'Paid' : i.paid > 0 ? 'Part' : 'Unpaid' } }
+  inv({ id: 'INV-3101', no: 'INV-3101', party: 'Joan Atuhaire', phone: '+44 7700 900 118', business: 'Construction', lines: [{ desc: 'Roofing stage · Kira-Mulawa 77', qty: 1, price: 128000000 }], paid: 0, due: '2026-11-30', createdAt: '2026-11-16T10:00:00+03:00', by: 'Eng. Paul Okello', propertyId: 'PP-WAK-0077' })
+  inv({ id: 'INV-3102', no: 'INV-3102', party: 'Kato Ssekandi', phone: '+256 772 118 440', business: 'Valuation', lines: [{ desc: 'Valuation for dfcu Bank · Ntinda apartment', qty: 1, price: 2400000 }], paid: 0, due: '2026-11-28', createdAt: '2026-11-18T09:00:00+03:00', by: 'Grace Namubiru', propertyId: 'PP-KLA-0820' })
+  inv({ id: 'INV-3103', no: 'INV-3103', party: 'Patience Nabirye', phone: '+256 772 640 811', business: 'Sales', lines: [{ desc: 'Agency commission 3% · Muyenga house', qty: 1, price: 69000000 }], paid: 34500000, due: '2026-12-15', createdAt: '2026-11-10T09:00:00+03:00', by: 'Hajji Issa Bukenya' })
+  inv({ id: 'INV-3104', no: 'INV-3104', party: 'Mukasa Holdings', phone: '+256 772 001 223', business: 'Construction', lines: [{ desc: 'Shell completion · Gayaza Rd shops', qty: 1, price: 210000000 }, { desc: 'Variation: extra parking slab', qty: 1, price: 18500000 }], paid: 0, due: '2026-11-20', createdAt: '2026-10-20T09:00:00+03:00', by: 'Eng. Paul Okello' })
+
+  db.audit['A-1'] = { id: 'A-1', at: '2026-11-20T08:02:00+03:00', who: 'Grace Namubiru', action: 'Signed in to Posh Office', area: 'Login' }
   return db
 }
 

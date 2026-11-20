@@ -11,6 +11,7 @@ const MobileApp = lazy(() => import('./app/MobileApp'))
 const Office = lazy(() => import('./office/Office'))
 const Verify = lazy(() => import('./verify/Verify'))
 const CardPage = lazy(() => import('./verify/CardPage'))
+const ReceiptCheck = lazy(() => import('./verify/ReceiptCheck'))
 
 applyPrefs()
 startSync()
@@ -60,6 +61,7 @@ function Root() {
           <Route path="/office/*" element={<Office />} />
           <Route path="/p/:code" element={<Verify />} />
           <Route path="/c/:cardId" element={<CardPage />} />
+          <Route path="/r/:no" element={<ReceiptCheck />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

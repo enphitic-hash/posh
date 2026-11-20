@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Routes, Route, useNavigate, useParams, Navigate, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { Wallet, Wrench, FileText, Receipt, UserPlus, Nfc, CheckCircle2, Smartphone, CreditCard, Landmark, PiggyBank, Split, Camera, Download, MessageCircle, ShieldCheck, Droplets, Zap, Clock, Plus, X } from 'lucide-react'
+import { printDoc, docFromPayment } from '../lib/docs'
+import { Wallet, Wrench, FileText, Receipt, UserPlus, Nfc, CheckCircle2, Smartphone, CreditCard, Landmark, PiggyBank, Split, Camera, Download, MessageCircle, ShieldCheck, Droplets, Zap, Clock, Plus, X, Printer } from 'lucide-react'
 import { useStore, list } from '../data/store'
 import { usePrefs } from '../data/prefs'
 import type { PayMethod, Payment, Repair } from '../data/types'
@@ -322,9 +323,10 @@ function ReceiptView() {
         {p.lines.map((x) => <div key={x.label} className="flex justify-between text-sm py-0.5"><span>{x.label}</span><span>{num(x.amount)}</span></div>)}
         <div className="flex justify-between font-extrabold text-lg mt-2"><span>Total</span><span>{ugx(p.amount)}</span></div>
       </Card>
-      <div className="grid grid-cols-2 gap-2 mt-3">
+      <div className="grid grid-cols-3 gap-2 mt-3">
         <Btn variant="outline" icon={<MessageCircle size={16} />} onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(wa)}`, '_blank')}>WhatsApp</Btn>
-        <Btn variant="outline" icon={<Download size={16} />} onClick={() => receiptPdf(db, p).catch(() => toast('Could not make the PDF', 'warn'))}>PDF receipt</Btn>
+        <Btn variant="outline" icon={<Download size={16} />} onClick={() => receiptPdf(db, p).catch(() => toast('Could not make the PDF', 'warn'))}>PDF</Btn>
+        <Btn variant="outline" icon={<Printer size={16} />} onClick={() => printDoc(docFromPayment(db, p), 'thermal')}>Print</Btn>
       </div>
       <Section title="Who was told">
         <Card className="p-3 space-y-2 text-sm">

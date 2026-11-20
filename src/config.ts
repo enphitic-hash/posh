@@ -14,5 +14,8 @@ export const CONFIG = {
     email: 'info@poshproperties.co.ug',
     web: 'www.poshproperties.co.ug',
     box: 'P.O. Box 114807 Kampala',
+    tin: '1000 4471 26 (demo)',
+    bank: { name: 'Stanbic Bank Uganda', branch: 'Bukoto branch', account: '9030 0123 4567 8', holder: 'Posh Properties Ltd', swift: 'SBICUGKX' },
+    momo: { mtn: '*165*3# · Merchant 771 240', airtel: '*185*9# · Merchant 4471 26' },
   },
 }

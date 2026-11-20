@@ -149,13 +149,14 @@ function Welcome() {
         <form className="space-y-3" onSubmit={(e) => {
           e.preventDefault()
           const digits = phone.replace(/\D/g, '').slice(-9)
+          if (digits.length < 9) return toast('Enter a phone number', 'warn')
+          if (pin.length < 4) return toast('Enter any 4-digit PIN', 'warn')
           const t = list(db, 'tenants').find((x) => x.phone.replace(/\D/g, '').slice(-9) === digits)
-          if (!t) return toast('No Posh tenant with that number', 'warn')
-          if (pin !== t.pin) return toast('Wrong PIN', 'warn')
-          go('tenant', { tenantId: t.id })
+          if (!t) toast('Demo: signed in as Nakato Sarah (any number works)')
+          go('tenant', { tenantId: t?.id ?? DEMO_TENANT })
         }}>
           <Field label="Phone number"><input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" /></Field>
-          <Field label="PIN" hint="Demo: Nakato Sarah, +256 772 300 412, PIN 1234"><input className={inputCls} value={pin} onChange={(e) => setPin(e.target.value)} inputMode="numeric" type="password" maxLength={4} /></Field>
+          <Field label="PIN" hint="Demo: any phone number and any 4-digit PIN work"><input className={inputCls} value={pin} onChange={(e) => setPin(e.target.value)} inputMode="numeric" type="password" maxLength={4} /></Field>
           <Btn block size="lg" type="submit">Sign in</Btn>
           <Btn block variant="ghost" type="button" onClick={() => go('tenant', { tenantId: DEMO_TENANT })}>Use the demo tenant</Btn>
         </form>

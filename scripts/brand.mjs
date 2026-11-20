@@ -46,6 +46,7 @@ for (const s of [16, 32, 48]) await shot(sized(favSvg, s, s), s, s, `scripts/.tm
 // ---- Logos ----
 await shot(sized(M.logoHorizontal(false), 1080, 240), 1080, 240, 'public/brand/logo-horizontal.png', true)
 await shot(sized(M.logoHorizontal(true), 1080, 240), 1080, 240, 'public/brand/logo-horizontal-dark.png', true)
+await shot(sized(M.logoHorizontal(false, 'PROPERTIES LTD'), 1080, 240), 1080, 240, 'public/brand/logo-company.png', true)
 await shot(sized(M.logoHeritage(false), 600, 660), 600, 660, 'public/brand/logo-heritage.png', true)
 await shot(sized(M.sealSvg(800), 800, 800), 800, 800, 'public/brand/seal.png', true)
 writeFileSync(out('public/brand/logo-horizontal.svg'), M.logoHorizontal(false))

@@ -29,7 +29,21 @@ function saveLocal(db: DB) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(db)) } catch { /* quota / private mode */ }
 }
 function loadLocal(): DB | null {
-  try { const s = localStorage.getItem(LS_KEY); return s ? (JSON.parse(s) as DB) : null } catch { return null }
+  try { const s = localStorage.getItem(LS_KEY); return s ? fillMissing(JSON.parse(s) as DB).db : null } catch { return null }
+}
+/** Older copies (local or server) may not have newer record kinds yet: add them from the sample data. */
+function fillMissing(db: DB) {
+  const seed = makeSeed()
+  const added: Kind[] = []
+  for (const k of KINDS) {
+    const cur = (db as unknown as Record<string, Record<string, unknown> | undefined>)[k]
+    if (!cur || Object.keys(cur).length === 0) {
+      const s = seed[k] as Record<string, unknown>
+      ;(db as unknown as Record<string, unknown>)[k] = { ...s }
+      if (Object.keys(s).length) added.push(k)
+    }
+  }
+  return { db, added }
 }
 
 export const useStore = create<Store>((set, get) => {
@@ -113,6 +127,11 @@ export async function startSync() {
     } else {
       db = empty()
       for (const r of all) if ((db as unknown as Record<string, unknown>)[r.kind]) (db[r.kind] as Record<string, unknown>)[r.id] = r.data
+      const { added } = fillMissing(db)
+      if (added.length) {
+        const rows = added.flatMap((k) => Object.values(db[k] as Record<string, { id: string }>).map((r) => ({ kind: k, id: r.id, data: r })))
+        sb.from('posh_records').upsert(rows).then(({ error }) => { if (error) console.warn('[posh] could not add new kinds', error.message) })
+      }
     }
     saveLocal(db)
     clearTimeout(timeout)

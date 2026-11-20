@@ -201,6 +201,40 @@ export interface Message { id: string; to: string; phone?: string; channel: 'Wha
 
 export interface Staff { id: string; name: string; role: string; email: string; pin: string; phone: string }
 
+export interface Line { desc: string; qty: number; price: number }
+export type Money = 'MTN MoMo' | 'Airtel Money' | 'Visa' | 'Mastercard' | 'Bank transfer' | 'Cash' | 'Cheque' | 'Posh Wallet'
+
+/** Any money in (receipt) or out (payment voucher) that is not tenant rent. */
+export interface Txn {
+  id: string
+  no: string
+  dir: 'in' | 'out'
+  category: string
+  business: string
+  party: string
+  phone?: string
+  lines: Line[]
+  total: number
+  paid: number
+  method: Money
+  ref: string
+  status: 'Paid' | 'Part'
+  at: string
+  by: string
+  note?: string
+  photo?: string
+  invoiceId?: string
+  propertyId?: string
+  supplierId?: string
+  tendered?: number
+  change?: number
+  payer?: string
+}
+
+export interface Invoice { id: string; no: string; party: string; phone: string; business: string; lines: Line[]; total: number; paid: number; due: string; status: 'Unpaid' | 'Part' | 'Paid'; createdAt: string; by: string; propertyId?: string }
+export interface Supplier { id: string; name: string; category: string; phone: string; contact: string; terms: string }
+export interface Audit { id: string; at: string; who: string; action: string; area: string }
+
 export interface DB {
   properties: Record<string, Property>
   landlords: Record<string, Landlord>
@@ -221,7 +255,11 @@ export interface DB {
   checkpoints: Record<string, Checkpoint>
   messages: Record<string, Message>
   staff: Record<string, Staff>
+  txns: Record<string, Txn>
+  invoices: Record<string, Invoice>
+  suppliers: Record<string, Supplier>
+  audit: Record<string, Audit>
 }
 
 export type Kind = keyof DB
-export const KINDS: Kind[] = ['properties', 'landlords', 'units', 'tenants', 'payments', 'technicians', 'repairs', 'listings', 'viewings', 'cards', 'taps', 'sites', 'workers', 'valuations', 'mortgages', 'deals', 'checkpoints', 'messages', 'staff']
+export const KINDS: Kind[] = ['properties', 'landlords', 'units', 'tenants', 'payments', 'technicians', 'repairs', 'listings', 'viewings', 'cards', 'taps', 'sites', 'workers', 'valuations', 'mortgages', 'deals', 'checkpoints', 'messages', 'staff', 'txns', 'invoices', 'suppliers', 'audit']

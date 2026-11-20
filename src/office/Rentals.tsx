@@ -3,11 +3,12 @@ import { useSearchParams } from 'react-router-dom'
 import { Download, Plus, Sparkles, Send, Phone, Search, FileText } from 'lucide-react'
 import { useStore, list } from '../data/store'
 import type { PayMethod, Tenant } from '../data/types'
-import { monthTotals, riskList, lateRisk, recordPayment, sendMessage, tenantDue } from '../lib/logic'
+import { monthTotals, riskList, lateRisk, sendMessage, tenantDue } from '../lib/logic'
 import { ugx, ugxShort, num, fmtDT, monthLabel, currentRentMonth, fmtDate } from '../lib/format'
 import { statementPdf, receiptPdf } from '../lib/pdf'
 import { ESTATE_LIST } from '../data/seed'
-import { Card, Stat, Badge, Btn, Sheet, Field, inputCls, toast, cx, Chips, statusTone, Avatar, Progress } from '../components/ui'
+import { Card, Stat, Badge, Btn, Sheet, toast, cx, Chips, statusTone, Avatar, Progress } from '../components/ui'
+import { RentFlow } from './Money'
 import { PageHead, Table } from './Office'
 
 const METHODS: PayMethod[] = ['MTN MoMo', 'Airtel Money', 'Bank transfer', 'Visa', 'Mastercard', 'Posh Wallet', 'Cash']
@@ -38,7 +39,7 @@ export function Rentals() {
     <PageHead title="Rent & payments" sub={`${tot.units} units · ${new Set(list(db, 'units').map((u) => u.estate)).size} estates · live`} actions={<>
       <Chips options={months.map((m) => monthLabel(m))} value={monthLabel(month)} onChange={(v) => setMonth(months.find((m) => monthLabel(m) === v)!)} />
       <Btn variant="outline" icon={<Download size={16} />} onClick={() => csv([['Receipt', 'Date', 'Tenant', 'Estate', 'Unit', 'Amount', 'Method', 'Ref', 'Via', 'Status'], ...pays.map((p) => [p.receipt, fmtDT(p.at), db.tenants[p.tenantId]?.name, db.units[p.unitId]?.estate, db.units[p.unitId]?.name, p.amount, p.method, p.ref, p.via, p.status])], `posh-payments-${month}.csv`)}>Export</Btn>
-      <Btn icon={<Plus size={16} />} onClick={() => setOpen(true)}>Record payment</Btn>
+      <Btn icon={<Plus size={16} />} onClick={() => setOpen(true)}>Take rent payment</Btn>
     </>} />
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
       <Stat label="Rent due" value={ugxShort(tot.due)} sub={`${tot.let} let · ${tot.vacant} vacant`} />
@@ -81,7 +82,7 @@ export function Rentals() {
       </div>
     </div>
     <AiPanel month={month} />
-    <RecordPayment open={open} onClose={() => setOpen(false)} month={month} />
+    <RentFlow open={open} onClose={() => setOpen(false)} />
   </>)
 }
 
@@ -112,26 +113,6 @@ function AiPanel({ month }: { month: string }) {
         <div className="space-y-2">{risks.map((r) => { const t = db.tenants[r.tenantId]; return <a key={t.id} href={`tel:${t.phone.replace(/\s/g, '')}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-card-2"><Avatar name={t.name} size={36} tone={r.score > 75 ? 'red' : 'gold'} /><div className="flex-1"><div className="font-semibold text-sm">{t.name}</div><div className="text-xs text-muted">{t.phone}</div></div><Phone size={16} className="text-brand" /></a> })}</div>
       </Sheet>
     </Card>
-  )
-}
-
-function RecordPayment({ open, onClose, month }: { open: boolean; onClose: () => void; month: string }) {
-  const db = useStore((s) => s.db)
-  const tenants = list(db, 'tenants').sort((a, b) => a.name.localeCompare(b.name))
-  const [tid, setTid] = useState('')
-  const [method, setMethod] = useState<PayMethod>('Cash')
-  const [amount, setAmount] = useState(0)
-  const t = db.tenants[tid]
-  useEffect(() => { if (t) setAmount(tenantDue(db, t, month).balance) }, [tid]) // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <Sheet open={open} onClose={onClose} title="Record a payment">
-      <div className="space-y-3">
-        <Field label="Tenant"><select className={inputCls} value={tid} onChange={(e) => setTid(e.target.value)}><option value="">Choose…</option>{tenants.map((x) => <option key={x.id} value={x.id}>{x.name} · {db.units[x.unitId]?.estate.replace('Posh ', '')} {db.units[x.unitId]?.name}</option>)}</select></Field>
-        <Field label="Method"><select className={inputCls} value={method} onChange={(e) => setMethod(e.target.value as PayMethod)}>{METHODS.map((m) => <option key={m}>{m}</option>)}</select></Field>
-        <Field label="Amount (UGX)" hint={t ? `Balance for ${monthLabel(month, true)}: ${ugx(tenantDue(db, t, month).balance)}` : undefined}><input className={inputCls} inputMode="numeric" value={amount ? num(amount) : ''} onChange={(e) => setAmount(+e.target.value.replace(/\D/g, ''))} /></Field>
-        <Btn block size="lg" disabled={!t || amount <= 0} onClick={() => { const bal = tenantDue(db, t, month).balance; recordPayment({ tenantId: t.id, amount, method, via: 'Office', month, lines: [{ label: amount < bal ? 'Part payment' : 'Rent and charges', amount }], part: amount < bal ? `Balance ${ugx(bal - amount)}` : undefined }); toast(`Receipt sent to ${t.name} on WhatsApp`); onClose(); setTid('') }}>Save and send receipt</Btn>
-      </div>
-    </Sheet>
   )
 }
 

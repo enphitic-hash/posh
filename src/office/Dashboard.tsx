@@ -46,7 +46,7 @@ export default function Dashboard() {
   const revMax = Math.max(...revenue.map((r) => r.v))
   const funnel = (['Enquiry', 'Viewing', 'Offer', 'Closed'] as const).map((s) => ({ s, n: deals.filter((d) => d.stage === s).length + (s === 'Enquiry' ? 44 : s === 'Viewing' ? 12 : 0) }))
   return (<>
-    <PageHead title={`${greet}, ${me.name.split(' ')[0] === 'Hajji' ? 'Hajji' : me.name.split(' ')[0]}`} sub={new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Kampala' }) + ' · every Posh business, live'} actions={<Btn variant="outline" onClick={() => nav('/office/rentals')}>Rent desk</Btn>} />
+    <PageHead title={`${greet}, ${me.name.split(' ')[0] === 'Hajji' ? 'Hajji' : me.name.split(' ')[0]}`} sub={new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Kampala' }) + ' · every Posh business, live'} actions={<><Btn variant="outline" onClick={() => nav('/office/purchases')}>Record a purchase</Btn><Btn variant="outline" onClick={() => nav('/office/finance')}>Finance</Btn><Btn onClick={() => nav('/office/cashier')}>Open cashier</Btn></>} />
     <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
       <Stat icon={<Handshake size={16} />} label="Sales this month" value={ugxShort(closed.reduce((a, d) => a + (d.value / 0.05), 0))} sub={`${closed.length} deals closed`} tone="up" />
       <Stat icon={<HardHat size={16} />} label="Active sites" value={sites.length} sub={behind.length ? `${behind.length} behind schedule` : 'all on schedule'} tone={behind.length ? 'down' : 'up'} />
