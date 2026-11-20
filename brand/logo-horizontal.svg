@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80">
+  <g transform="translate(0 0) scale(0.8)">
+  <g stroke-linejoin="miter" stroke-miterlimit="1.5" stroke-linecap="square" fill="none" stroke-width="3.4">
+    <path stroke="#ED1F24" d="M14 78 V62 L22 57 V78" />
+    <path stroke="#ED1F24" d="M28 78 V46 L37 40 V78" />
+    <path stroke="#ED1F24" d="M43 78 V26 L50 14 V78" />
+    <path stroke="#136734" d="M50 14 L57 26 V78" />
+    <path stroke="#136734" d="M63 78 V36 L71 41 V78" />
+    <path stroke="#136734" d="M77 78 V52 L85 57 V78" />
+    <path stroke="#ED1F24" d="M6 78 H50" /><path stroke="#136734" d="M50 78 H94" />
+  </g></g>
+  <text x="88" y="50" font-family="'DM Serif Display', Georgia, serif" font-size="46" fill="#231F20" letter-spacing="1">POSH</text>
+  <text x="90" y="72" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="14" fill="#136734" letter-spacing="5.5">PASSPORT</text>
+</svg>

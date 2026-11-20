@@ -1,0 +1,20 @@
+{
+  "name": "Posh Passport · Posh Properties",
+  "short_name": "Posh",
+  "description": "Pay rent with your Posh card, report repairs, find homes and verify any Posh property.",
+  "start_url": "./#/app",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#062E17",
+  "theme_color": "#136734",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Posh Office", "url": "./#/office", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Pay rent", "url": "./#/app/pay/go", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs><path id="ring" d="M256 256 m-196 0 a196 196 0 1 1 392 0 a196 196 0 1 1 -392 0"/></defs>
+  <circle cx="256" cy="256" r="250" fill="#FFFFFF"/>
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#136734" stroke-width="10"/>
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#ED1F24" stroke-width="4"/>
+  <text font-family="Inter, Arial, sans-serif" font-weight="700" font-size="34" letter-spacing="7" fill="#231F20"><textPath href="#ring" startOffset="0" textLength="1215" lengthAdjust="spacing">POSH PROPERTIES · VERIFIED · POSH PASSPORT · </textPath></text>
+  <g transform="translate(156 128) scale(2)">
+  <g stroke-linejoin="miter" stroke-miterlimit="1.5" stroke-linecap="square" fill="none" stroke-width="3.2">
+    <path stroke="#ED1F24" d="M14 78 V62 L22 57 V78" />
+    <path stroke="#ED1F24" d="M28 78 V46 L37 40 V78" />
+    <path stroke="#ED1F24" d="M43 78 V26 L50 14 V78" />
+    <path stroke="#136734" d="M50 14 L57 26 V78" />
+    <path stroke="#136734" d="M63 78 V36 L71 41 V78" />
+    <path stroke="#136734" d="M77 78 V52 L85 57 V78" />
+    <path stroke="#ED1F24" d="M6 78 H50" /><path stroke="#136734" d="M50 78 H94" />
+  </g></g>
+  <text x="256" y="330" text-anchor="middle" font-family="'DM Serif Display', Georgia, serif" font-size="58" fill="#231F20">POSH</text>
+</svg>
