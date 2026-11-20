@@ -11,6 +11,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,6 +62,7 @@ jobs:
             Built from ${{ github.sha }}.
             - **Posh-Passport.apk**: install on any Android phone (allow "install unknown apps").
             - **posh-web.zip**: unzip into the `posh/` folder of victorbee.com.
+            - Database: run `supabase/schema.sql` (and optionally `supabase/seed.sql`) from the repo. See README.
           files: |
             Posh-Passport.apk
             posh-web.zip
@@ -67,7 +70,6 @@ jobs:
       - name: Deploy to Cloudflare Pages (only if secrets are set)
         if: ${{ env.CF_TOKEN != '' }}
         env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler@3 pages deploy dist --project-name "${{ vars.CF_PAGES_PROJECT || 'posh-passport' }}" --branch main

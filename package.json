@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "brand": "node scripts/brand.mjs",
+    "seed:sql": "tsx scripts/seed-sql.mjs",
+    "android": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug",
+    "test:e2e": "node scripts/e2e.mjs /tmp/posh-e2e && node scripts/e2e-money.mjs /tmp/posh-e2e"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
@@ -37,6 +42,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.90.0",
     "tailwindcss": "^4.3.5",
+    "tsx": "^4.20.6",
     "typescript": "~7.0.2",
     "vite": "^8.3.6"
   }
