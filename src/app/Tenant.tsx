@@ -166,6 +166,8 @@ function PayFlow() {
   const amount = split ? firstPart : due.balance
   const walletShort = method === 'Posh Wallet' && t.wallet < amount
   const autoScan = useRef(false)
+  // Set once this screen records a payment, so clearing the balance doesn't bounce away before the receipt opens.
+  const paidHere = useRef(false)
 
   useEffect(() => {
     // On Android Chrome, start listening for the card straight away.
@@ -192,6 +194,7 @@ function PayFlow() {
   async function finish() {
     setBusy(true)
     await new Promise((r) => setTimeout(r, method === 'Bank transfer' ? 900 : 1800))
+    paidHere.current = true
     const lines = split ? [{ label: 'Part 1 of 2 (rent)', amount }] : due.lines.map((l) => ({ ...l }))
     if (!split && due.paid > 0) lines.push({ label: 'Less paid earlier', amount: -due.paid })
     const p = recordPayment({ tenantId: t.id, amount, method: method === 'Visa' && card.no.trim().startsWith('5') ? 'Mastercard' : method, via: tapped ? 'Card tap' : 'App', lines, month: due.month, part: split ? `Part 1 of 2 · balance ${ugx(due.balance - amount)} by 1st` : undefined })
@@ -199,7 +202,7 @@ function PayFlow() {
     nav(`/app/receipt/${p.id}?new=1`, { replace: true })
   }
 
-  if (due.balance === 0) return <Navigate to="/app/pay" replace />
+  if (due.balance === 0 && !paidHere.current) return <Navigate to="/app/pay" replace />
   return (<>
     <TopBar back title={step === 1 ? 'Pay with Posh card' : step === 2 ? 'Choose how to pay' : method.includes('MoMo') || method.includes('Airtel') ? 'Approve on your phone' : 'Confirm payment'} sub={`Step ${step} of 3`} />
     <Screen>
